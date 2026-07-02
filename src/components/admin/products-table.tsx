@@ -14,6 +14,7 @@ import {
   deleteProduct,
   duplicateProduct,
   toggleProductFlag,
+  toggleStockStatus,
 } from "@/app/admin/actions";
 
 export function ProductsTable({
@@ -92,13 +93,28 @@ export function ProductsTable({
                 <td className="p-4 text-text-secondary">{categoryName(p.categoryId)}</td>
                 <td className="p-4 font-medium">{formatPrice(p.sellingPrice)}</td>
                 <td className="p-4">
-                  {p.stockStatus === "sold_out" ? (
-                    <Badge variant="danger">Sold out</Badge>
-                  ) : p.stockStatus === "low_stock" ? (
-                    <Badge variant="warning">Low stock</Badge>
-                  ) : (
-                    <Badge variant="success">In stock</Badge>
-                  )}
+                  <select
+                    value={p.stockStatus}
+                    onChange={(e) =>
+                      run(
+                        p.id,
+                        () => toggleStockStatus(p.id, e.target.value),
+                        "Stock status updated."
+                      )
+                    }
+                    disabled={busyId === p.id && pending}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold outline-none border cursor-pointer transition-colors ${
+                      p.stockStatus === "sold_out"
+                        ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                        : p.stockStatus === "low_stock"
+                          ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                          : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                    }`}
+                  >
+                    <option value="in_stock" className="bg-white text-text-primary">In stock</option>
+                    <option value="low_stock" className="bg-white text-text-primary">Low stock</option>
+                    <option value="sold_out" className="bg-white text-text-primary">Sold out</option>
+                  </select>
                 </td>
                 <td className="p-4">
                   <div className="flex items-center gap-1">

@@ -9,6 +9,7 @@ export interface AdminStats {
   whatsappClicks: number;
   tryOnRequests: number;
   featuredProducts: number;
+  buyNowInquiries: number;
 }
 
 async function count(table: string): Promise<number> {
@@ -34,10 +35,11 @@ export async function getAdminStats(): Promise<{
     getCategories(),
   ]);
 
-  const [totalUsers, whatsappClicks, tryOnRequests] = await Promise.all([
+  const [totalUsers, whatsappClicks, tryOnRequests, buyNowInquiries] = await Promise.all([
     count("profiles"),
     count("whatsapp_clicks"),
     count("tryon_history"),
+    count("order_inquiries"),
   ]);
 
   const stats: AdminStats = {
@@ -47,6 +49,7 @@ export async function getAdminStats(): Promise<{
     whatsappClicks,
     tryOnRequests,
     featuredProducts: products.filter((p) => p.featured).length,
+    buyNowInquiries,
   };
 
   const categoryPerformance = categories.map((c) => ({

@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Sparkles,
   Star,
+  ShoppingBag,
 } from "lucide-react";
 import { BarChart } from "@/components/admin/bar-chart";
 import { getAdminStats } from "@/lib/admin-stats";
@@ -23,7 +24,7 @@ export default async function AdminOverview() {
     { label: "Users", value: stats.totalUsers.toLocaleString(), icon: Users },
     { label: "WhatsApp Clicks", value: stats.whatsappClicks.toLocaleString(), icon: MessageCircle },
     { label: "AI Try-On Requests", value: stats.tryOnRequests.toLocaleString(), icon: Sparkles },
-    { label: "Featured", value: stats.featuredProducts, icon: Star },
+    { label: "Buy Now Inquiries", value: stats.buyNowInquiries.toLocaleString(), icon: ShoppingBag },
   ];
 
   return (

@@ -28,6 +28,7 @@ function mapProduct(row: any): Product {
     material: row.material ?? undefined,
     size: row.size ?? undefined,
     color: row.color ?? undefined,
+    colors: Array.isArray(row.colors) ? row.colors : [],
     gender: row.gender ?? undefined,
     tags: row.tags ?? [],
     condition: row.condition ?? { rating: "Good" },
@@ -148,4 +149,24 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 export async function getCategoryBySlug(slug: string): Promise<Category | null> {
   const categories = await getCategories();
   return categories.find((c) => c.slug === slug) ?? null;
+}
+
+export async function getProductsByIds(ids: string[]): Promise<Product[]> {
+  if (!ids.length) return [];
+  if (!dbEnabled()) {
+    return mock.products.filter((p) => ids.includes(p.id));
+  }
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .in("id", ids);
+    if (error || !data?.length) {
+      return mock.products.filter((p) => ids.includes(p.id));
+    }
+    return data.map(mapProduct);
+  } catch {
+    return mock.products.filter((p) => ids.includes(p.id));
+  }
 }

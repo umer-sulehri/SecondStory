@@ -46,6 +46,7 @@ export interface ProductInput {
   material?: string;
   size?: string;
   color?: string;
+  colors?: { name: string; hex: string; quantity: number }[];
   gender?: string;
   condition: string;
   quantity: number;
@@ -79,6 +80,7 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult> {
       material: input.material ?? null,
       size: input.size ?? null,
       color: input.color ?? null,
+      colors: input.colors ?? [],
       gender: input.gender ?? null,
       condition: { rating: input.condition },
       quantity: input.quantity,
@@ -94,6 +96,21 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult> {
       ? await supabase.from("products").update(row).eq("id", input.id)
       : await supabase.from("products").insert(row);
 
+    if (error) return { ok: false, error: error.message };
+    revalidateStorefront();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed" };
+  }
+}
+
+export async function toggleStockStatus(id: string, status: string): Promise<ActionResult> {
+  try {
+    const supabase = await requireAdmin();
+    const { error } = await supabase
+      .from("products")
+      .update({ stock_status: status })
+      .eq("id", id);
     if (error) return { ok: false, error: error.message };
     revalidateStorefront();
     return { ok: true };
@@ -202,3 +219,175 @@ export async function updateCategory(
     return { ok: false, error: e instanceof Error ? e.message : "Failed" };
   }
 }
+
+/* ---------------- Banners ---------------- */
+
+export async function getBanners() {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("banners")
+      .select("*")
+      .order("order", { ascending: true });
+    if (error) return [];
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      imageUrl: row.image_url,
+      linkUrl: row.link_url,
+      size: row.size,
+      status: row.status,
+      position: row.position,
+      order: row.order,
+      createdAt: row.created_at,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function saveBanner(input: {
+  id?: string;
+  title: string;
+  imageUrl: string;
+  linkUrl?: string;
+  size?: string;
+  status: "active" | "draft";
+  order: number;
+}): Promise<ActionResult> {
+  try {
+    const supabase = await requireAdmin();
+    const row = {
+      title: input.title,
+      image_url: input.imageUrl,
+      link_url: input.linkUrl ?? null,
+      size: input.size ?? null,
+      status: input.status,
+      "order": input.order,
+    };
+    const { error } = input.id
+      ? await supabase.from("banners").update(row).eq("id", input.id)
+      : await supabase.from("banners").insert(row);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/banners");
+    revalidatePath("/");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed" };
+  }
+}
+
+export async function deleteBanner(id: string): Promise<ActionResult> {
+  try {
+    const supabase = await requireAdmin();
+    const { error } = await supabase.from("banners").delete().eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/banners");
+    revalidatePath("/");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed" };
+  }
+}
+
+export async function toggleBannerStatus(id: string, status: "active" | "draft"): Promise<ActionResult> {
+  try {
+    const supabase = await requireAdmin();
+    const { error } = await supabase
+      .from("banners")
+      .update({ status })
+      .eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/admin/banners");
+    revalidatePath("/");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed" };
+  }
+}
+
+/* ---------------- CMS Pages ---------------- */
+
+export interface CmsPage {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  updatedAt: string;
+}
+
+export async function getCmsPages(): Promise<CmsPage[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("cms_pages")
+      .select("*")
+      .order("title", { ascending: true });
+    if (error) return [];
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      slug: row.slug,
+      content: row.content,
+      updatedAt: row.updated_at,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getCmsPageBySlug(slug: string): Promise<CmsPage | null> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("cms_pages")
+      .select("*")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error || !data) return null;
+    return {
+      id: data.id,
+      title: data.title,
+      slug: data.slug,
+      content: data.content,
+      updatedAt: data.updated_at,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function saveCmsPage(
+  slug: string,
+  content: string,
+  title: string
+): Promise<ActionResult> {
+  try {
+    const supabase = await requireAdmin();
+    const { data: existing } = await supabase
+      .from("cms_pages")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    const row = {
+      title,
+      slug,
+      content,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = existing
+      ? await supabase.from("cms_pages").update(row).eq("id", existing.id)
+      : await supabase.from("cms_pages").insert(row);
+
+    if (error) return { ok: false, error: error.message };
+    revalidatePath(`/admin/cms/${slug}`);
+    revalidatePath(slug);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed" };
+  }
+}
+
+

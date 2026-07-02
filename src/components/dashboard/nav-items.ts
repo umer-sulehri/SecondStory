@@ -14,6 +14,7 @@ import {
   Mail,
   BarChart3,
   FileText,
+  ShoppingBag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -36,6 +37,7 @@ export const navIcons = {
   Mail,
   BarChart3,
   FileText,
+  ShoppingBag,
 } satisfies Record<string, LucideIcon>;
 
 export type NavIconName = keyof typeof navIcons;

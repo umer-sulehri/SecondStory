@@ -2,28 +2,39 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Heart, Share2, Sparkles, Truck, RotateCcw } from "lucide-react";
+import { Heart, Share2, Sparkles, Truck, RotateCcw, ShoppingBag } from "lucide-react";
 import type { Product } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WhatsAppButton } from "@/components/product/whatsapp-button";
+import { BuyNowModal } from "@/components/product/buy-now-modal";
 import { TryOnModal } from "@/components/tryon/tryon-modal";
 import { cn, formatPrice, discountPercent } from "@/lib/utils";
 import { useWishlist } from "@/store/wishlist";
 import { useRecentlyViewed } from "@/store/recently-viewed";
 import { toast } from "@/store/toast";
 import { SITE } from "@/data/mock";
+import { createClient } from "@/lib/supabase/client";
 
 export function ProductInfo({ product }: { product: Product }) {
   const { has, toggle } = useWishlist();
   const addRecent = useRecentlyViewed((s) => s.add);
   const [tryOnOpen, setTryOnOpen] = useState(false);
+  const [buyNowOpen, setBuyNowOpen] = useState(false);
+  const [selectedColor, setSelectedColor] = useState("");
   const wished = has(product.id);
   const discount = discountPercent(product.originalPrice, product.sellingPrice);
 
   useEffect(() => {
     addRecent(product.id);
   }, [product.id, addRecent]);
+
+  // Set default selected color if colors exist
+  useEffect(() => {
+    if (product.colors && product.colors.length > 0) {
+      setSelectedColor(product.colors[0].name);
+    }
+  }, [product.colors]);
 
   async function share() {
     const url = `${SITE.url}/product/${product.slug}`;
@@ -39,6 +50,32 @@ export function ProductInfo({ product }: { product: Product }) {
     }
   }
 
+  const handleWishlistClick = async () => {
+    toggle(product.id);
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          if (wished) {
+            await supabase
+              .from("wishlists")
+              .delete()
+              .eq("user_id", user.id)
+              .eq("product_id", product.id);
+          } else {
+            await supabase
+              .from("wishlists")
+              .insert({ user_id: user.id, product_id: product.id });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync wishlist to database:", err);
+      }
+    }
+  };
+
   const specs = [
     ["Brand", product.brand],
     ["Material", product.material],
@@ -50,6 +87,7 @@ export function ProductInfo({ product }: { product: Product }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Brand & Title */}
       <div>
         {product.brand && (
           <span className="text-sm font-medium uppercase tracking-wider text-text-secondary">
@@ -95,6 +133,40 @@ export function ProductInfo({ product }: { product: Product }) {
 
       <p className="leading-relaxed text-text-secondary">{product.description}</p>
 
+      {/* Interactive Color Swatches */}
+      {product.colors && product.colors.length > 0 && (
+        <div className="space-y-3 rounded-3xl border border-border bg-surface p-5">
+          <h3 className="text-sm font-semibold text-text-primary">Available Colors</h3>
+          <div className="flex flex-wrap gap-2">
+            {product.colors.map((c) => {
+              const isSelected = selectedColor === c.name;
+              return (
+                <button
+                  key={c.name}
+                  type="button"
+                  onClick={() => setSelectedColor(c.name)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
+                    isSelected
+                      ? "border-primary bg-primary-light text-primary ring-2 ring-primary/20"
+                      : "border-border bg-white hover:border-slate-400 text-text-secondary"
+                  )}
+                >
+                  <span
+                    className="size-4 rounded-full border border-black/10 shrink-0"
+                    style={{ backgroundColor: c.hex }}
+                  />
+                  <span>{c.name}</span>
+                  <span className="text-[10px] opacity-75">
+                    ({c.quantity} available)
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex flex-col gap-3">
         <div className="flex gap-3">
@@ -112,7 +184,7 @@ export function ProductInfo({ product }: { product: Product }) {
             size="icon"
             aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
             aria-pressed={wished}
-            onClick={() => toggle(product.id)}
+            onClick={handleWishlistClick}
             className="size-13"
           >
             <motion.span animate={{ scale: wished ? [1, 1.3, 1] : 1 }} transition={{ duration: 0.3 }}>
@@ -123,7 +195,19 @@ export function ProductInfo({ product }: { product: Product }) {
             <Share2 className="size-5" />
           </Button>
         </div>
-        <WhatsAppButton product={product} />
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <WhatsAppButton product={product} />
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => setBuyNowOpen(true)}
+            className="w-full"
+          >
+            <ShoppingBag className="size-5" />
+            Buy Now
+          </Button>
+        </div>
       </div>
 
       {/* Perks */}
@@ -164,6 +248,12 @@ export function ProductInfo({ product }: { product: Product }) {
       )}
 
       <TryOnModal product={product} open={tryOnOpen} onClose={() => setTryOnOpen(false)} />
+      <BuyNowModal
+        product={product}
+        open={buyNowOpen}
+        onClose={() => setBuyNowOpen(false)}
+        selectedColor={selectedColor}
+      />
     </div>
   );
 }

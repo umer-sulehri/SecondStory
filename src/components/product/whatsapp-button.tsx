@@ -36,8 +36,26 @@ export function WhatsAppButton({
 
   const href = buildWhatsAppLink(SITE.whatsappNumber, message);
 
+  const handleClick = async () => {
+    try {
+      await fetch("/api/whatsapp-click", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id }),
+      });
+    } catch (e) {
+      console.error("Failed to log WhatsApp click", e);
+    }
+  };
+
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+      onClick={handleClick}
+    >
       <Button variant="whatsapp" size={size} className="w-full">
         <MessageCircle className="size-5" />
         Buy on WhatsApp

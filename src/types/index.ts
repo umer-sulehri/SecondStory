@@ -30,6 +30,12 @@ export interface ProductImage {
   alt: string;
 }
 
+export interface ProductColor {
+  name: string;
+  hex: string;
+  quantity: number;
+}
+
 export interface ConditionReport {
   rating: ProductCondition;
   stains?: boolean;
@@ -62,7 +68,9 @@ export interface Product {
   material?: string;
   size?: string;
   color?: string;
+  colors?: ProductColor[];
   gender?: Gender;
+
   tags: string[];
 
   // Condition
@@ -96,6 +104,19 @@ export interface Review {
   createdAt: string;
   featured?: boolean;
 }
+
+export interface Banner {
+  id: string;
+  title: string;
+  imageUrl: string;
+  linkUrl?: string;
+  size?: string;
+  status: "active" | "draft";
+  position?: string;
+  order: number;
+  createdAt: string;
+}
+
 
 export interface TryOnResult {
   id: string;

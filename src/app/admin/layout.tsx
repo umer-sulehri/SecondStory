@@ -9,6 +9,8 @@ const items: NavItem[] = [
   { label: "Products", href: "/admin/products", icon: "Package" },
   { label: "Categories", href: "/admin/categories", icon: "FolderTree" },
   { label: "Banners", href: "/admin/banners", icon: "ImageIcon" },
+  { label: "Inquiries", href: "/admin/inquiries", icon: "ShoppingBag" },
+  { label: "User Interests", href: "/admin/user-interests", icon: "Heart" },
   { label: "Users", href: "/admin/users", icon: "Users" },
   { label: "Reviews", href: "/admin/reviews", icon: "Star" },
   { label: "Newsletter", href: "/admin/newsletter", icon: "Mail" },

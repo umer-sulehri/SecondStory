@@ -2,13 +2,32 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Sparkles, Trash2, Download } from "lucide-react";
 import { useTryOnHistory } from "@/store/tryon-history";
-import { products } from "@/data/mock";
 import { Button } from "@/components/ui/button";
+import type { Product } from "@/types";
 
 export default function TryOnHistoryPage() {
   const { items, remove, clear } = useTryOnHistory();
+  const [productMap, setProductMap] = useState<Record<string, Product>>({});
+
+  useEffect(() => {
+    const ids = [...new Set(items.map((i) => i.productId))].filter(Boolean);
+    if (!ids.length) return;
+    fetch("/api/products/by-ids", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    })
+      .then((r) => r.json())
+      .then((data: Product[]) => {
+        const map: Record<string, Product> = {};
+        data.forEach((p) => (map[p.id] = p));
+        setProductMap(map);
+      })
+      .catch(() => {});
+  }, [items.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function download(url: string, id: string) {
     const a = document.createElement("a");
@@ -46,7 +65,7 @@ export default function TryOnHistoryPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
           {items.map((item) => {
-            const product = products.find((p) => p.id === item.productId);
+            const product = productMap[item.productId];
             return (
               <div
                 key={item.id}
